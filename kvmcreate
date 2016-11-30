@@ -1,0 +1,230 @@
+#!/usr/bin/perl
+my $basedir;
+BEGIN{
+    $basedir = $0;
+    $basedir =~ s%(.*)/[^/]+$%\1%;
+}
+use lib $basedir;
+
+require kvm;
+
+# my $iso="/var/lib/libvirt/images/CentOS-7-x86_64-Minimal-1511.iso";
+# my $imgsrc="/var/lib/libvirt/centos7-base-install.img";
+
+my %arg=@ARGV;
+
+sub isoInstall(){
+    my $isosrc = shift;
+    my $size = shift;
+    my $destimg = shift;
+    my $cmd = " --disk ";
+    if ( defined $destimg) {  # TODO: else it autonames?
+	$cmd .= " $destimg,"
+    };
+    $cmd .= "size=10,device=disk,bus=virtio --cdrom $isosrc";
+}
+
+sub importImg(){
+    my $imgsrc = shift;
+    my $cmd = " --disk path=$imgsrc,device=disk,bus=virtio --import ";
+}
+
+sub thinClone(){
+    my $clonesrc = shift;
+    my $clonedest = shift;
+    
+    die usage("dest already exists: $clonedest\n") if -e $clonedest;
+
+    if(system "qemu-img", "create", "-b",  $clonesrc, "-f", "qcow2" , $clonedest ){
+    	die usage("could not execute create destination img: $clonedest\n");
+    }
+    my $cmd = " --disk path=$clonedest,device=disk,bus=virtio --import ";
+}
+
+sub hardClone(){
+    my $clonesrc = shift;
+    my $clonedest = shift;
+    
+    die usage("dest already exists: $clonedest\n") if -e $clonedest;
+
+    if(system "cp", $clonesrc, $clonedest ){
+    	die usage("could not copy to destination: $clonedest\n");
+    }
+    chmod 0644, $clonedest;
+    my $cmd = " --disk path=$clonedest,device=disk,bus=virtio --import ";
+}
+
+sub baseClone(){
+    my $srcvmname = shift;
+    my $destimg = shift;
+
+    my $kvms = kvm::list();
+    my $tmpname = $srcvmname;
+    
+    
+    while (exists $kvms->{$tmpname}){
+	$i++;
+	$tmpname = "$srcvmname-$i";
+    }    
+
+    die usage("dest already exists: $destimg\n") if -e $destimg;
+
+    if(system "virt-clone", "--original", $srcvmname, "--name", $tmpname, "--file", $destimg){
+    	if ( -e $destimg ){
+    	    unlink $destimg or warn "failed to remove: $destimg: $!\n";
+    	}
+    	die "unable to create clone $!\n";
+    }
+
+    if (!kvm::shutdown($tmpname)){
+	#TODO cleanup
+	die "unable to shutdown $tmpname\n";
+    }
+
+    print "preping the clone....\n";
+    if(system "virt-sysprep", "-d", "$tmpname"){
+	#TODO cleanup
+	die "unable to prep image\n";
+    }
+
+    chmod 0644, $destimg;
+    
+    if(system "virsh destroy $tmpname"){
+	#TODO cleanup
+	#warn "unable to destroy $tmpname\n";
+    }
+
+    if( system "virsh undefine $tmpname"){
+	#TODO cleanup
+	die "unable to undefine $tmpname\n";
+    }
+    print "new baseclone created: $destimg\n";
+
+}
+
+if ( ! defined $arg{"baseclone"} && ! defined $arg{"name"} ) {
+    die usage('missing name <vmname>');
+}
+
+if (! defined $arg{"mem"}){
+    $arg{mem} = 2048;
+}
+
+if (! defined $arg{"cpu"}){
+    $arg{cpu} = 2;
+}
+
+if (! defined $arg{"bridge"}){
+    $arg{bridge} = 'virbr0';
+}
+
+my $cmd = "virt-install";
+$cmd = "$cmd --name $arg{name} ";
+$cmd = "$cmd --ram $arg{mem} ";
+$cmd = "$cmd --os-type=linux "; #--os-variant=centos
+$cmd = "$cmd --vcpus $arg{cpu} ";
+$cmd = "$cmd --vnc ";
+$cmd = "$cmd --noautoconsole ";
+$cmd = "$cmd --console pty,target_type=serial ";
+$cmd = "$cmd --network bridge=$arg{bridge},model=virtio ";
+
+my $installMethod;
+
+my $defcount;
+
+if ( defined $arg{"iso"} ) {
+    $defcount++;
+    $installMethod = &isoInstall($arg{iso},10); #TODO make size(here 10) customizable
+}
+
+if ( defined $arg{"import"} ) {
+    $defcount++;
+    $installMethod = &importImg($arg{'import'});
+}
+
+if ( defined $arg{"thinclone"} ) {
+    $defcount++;
+    if ( ! defined $arg{"dest"} ) {
+	die usage("missing dest")
+    } 
+    $installMethod = &thinClone($arg{'thinclone'}, $arg{'dest'});
+}
+
+
+if ( defined $arg{"hardclone"} ) {
+    $defcount++;
+    if ( ! defined $arg{"dest"} ) {
+	die usage("missing dest")
+    } 
+    $installMethod = &hardClone($arg{'hardclone'}, $arg{'dest'});
+}
+
+if ( defined $arg{"baseclone"} ) {
+    $defcount++;
+    &baseClone($arg{'baseclone'}, $arg{'dest'});
+    exit; #TODO
+}
+
+
+if ($defcount > 1) {
+    die usage('thin, import and iso mutually exlusive\n');
+} elsif ($defcount < 1) {
+    die usage("An install method must be specified: [ import | iso | thinclone | hardclone ]\n");
+}
+
+$cmd = "$cmd $installMethod\n";
+
+if (system $cmd){
+    my $dest=$arg{'dest'};
+    if ( -e $dest ){
+	print "removing $dest...\n";
+    }
+    if (defined $dest && -e $dest ){
+	unlink $dest or warn "failed to remove: $dest: $!\n";
+    }
+}
+
+# my $uid = `virsh domuuid $vmName`;
+# $uid =~ s/^\s+|\s+$//g; #trim
+
+
+sub usage(){
+
+    my $msg = shift;
+    my $usg = "Usage: $0
+
+Required:
+
+	Exactly one of
+	  iso <isosrc> name <vmname>
+	  import <imgsrc> name <vmname>
+	  thinclone <imgsrc> dest <imgdest> name <vmname>
+	  hardclone <imgsrc> dest <imgdest> name <vmname>
+	  baseclone <srcvmname> dest <imgdest> 
+
+Optional:
+
+	mem <memory>  -- in MB
+	cpu <cpu>     -- number of virtural cpus to assign
+	bridge <br>   -- network bridge to assign to
+";
+    
+    if (defined $msg) { 
+	my $red = `tput setaf 1`;
+	my $reset = `tput sgr 0`;
+
+	if (chomp($msg) >0 ) {
+	    $reset .= "\n";
+	} else {
+	    $msg .= "\n";
+	}
+
+	$usg .= $red;
+	$usg .= "\n${red}Error: $msg" . $reset;
+	
+
+    }
+
+
+    return $usg;
+}

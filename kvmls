@@ -1,0 +1,22 @@
+#!/usr/bin/perl
+my $basedir;
+BEGIN{
+    $basedir = $0;
+    $basedir =~ s%(.*)/[^/]+$%\1%;
+}
+use lib $basedir;
+
+require kvm;
+
+my $kvms = kvm::list();
+
+while ( ($vmname, $kvm) = each %$kvms ){
+    print "$vmname(" . $kvm->{"state"} . ")\n";
+    while ( ($blkid, $src) = each $kvm->{"blklist"}){
+	print "\t$blkid: $src\n";
+    }
+}
+
+sub usage(){
+    print "Usage: %0 \nkvmls\n";
+}

@@ -1,0 +1,37 @@
+#!/usr/bin/perl
+my $basedir;
+BEGIN{
+    $basedir = $0;
+    $basedir =~ s%(.*)/[^/]+$%\1%;
+}
+use lib $basedir;
+
+my $vmname = shift @ARGV;
+
+if ( ! defined $vmname ){
+    die usage("please provide a vmname\n");
+}
+
+
+exec "virsh console $vmname";
+
+sub usage(){
+    my $msg = shift;
+    my $usg = "Usage: $0 <vmname>";
+    
+    if (defined $msg) { 
+	my $red = `tput setaf 1`;
+	my $reset = `tput sgr 0`;
+
+	if (chomp($msg) >0 ) {
+	    $reset .= "\n";
+	} else {
+	    $msg .= "\n";
+	}
+
+	$usg .= $red;
+	$usg .= "\n${red}Error: $msg" . $reset;
+    }
+
+    return $usg;
+}

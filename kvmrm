@@ -1,0 +1,132 @@
+#!/usr/bin/perl
+my $basedir;
+BEGIN{
+    $basedir = $0;
+    $basedir =~ s%(.*)/[^/]+$%\1%;
+}
+use lib $basedir;
+
+require kvm;
+
+my @flagv = kvm::stripFlags();
+my $force = 0;
+foreach  my $f (@flagv) {
+    if ( $f eq '-f' || $f eq '--force' ) {
+	$force=1;
+    } elsif ($f eq '-h' || $f eq '--help'){
+	die usage();
+    }
+}
+
+my $vmname = shift @ARGV;
+if ( ! defined $vmname ) {
+    die usage("please specify a vmname\n");
+}
+
+# TODO move to kvm:list()
+# my $uid = `virsh domuuid $vmName`;
+# $uid =~ s/^\s+|\s+$//g; #trim
+
+my $blklist = kvm::blklist($vmname);
+
+my @blkids = keys ( %$blklist);
+
+if ( ! $force && scalar @blkids != 1) {
+    print "Multiple image files found:\n";
+    while ( ($id, $img) = each %$blklist){
+	print "\t$id: $img \n";
+    }
+    if ( !$force && !confirm("Do you want to continue? ")){
+	die "user aborted\n";
+    }
+}
+
+system "virsh destroy $vmname";
+system "virsh undefine $vmname";
+
+while( ($id, $img) = each %$blklist){
+    
+    $rmCmd = "virsh vol-delete --pool default $img";
+
+    if ( $force || confirm("Are you sure you want to delete $img? ")) {
+	system $rmCmd;
+    } else {
+	print "skipping: $rmCmd\n";
+    }
+}
+
+sub confirm(){
+    my $msg = shift;
+    print "$msg";
+    chomp (my $answer = <STDIN>);
+    $answer =~ s/(.*)/\U$1/gi;
+    if ($answer =~ /^Y/) {
+	return 1;
+    }
+    return 0;
+}
+
+
+exit;
+
+my $domblklist = `virsh domblklist $vmName`;
+@mounts = split /\n/,$domblklist;
+
+@img = split /\s+/,$mounts[2];
+$img = $img[1];
+
+system "virsh destroy $vmName";
+system "virsh undefine $vmName";
+
+if (scalar @mounts != 3) {
+    print "I don't know how to handle the removal of the img files\n\n";
+    print $domblklist . "\n";
+    exit;
+}
+
+if (! $force){
+    print "Are you sure you want to delete: $img? ";
+    chomp(my $answer = <STDIN>);
+    $answer =~ s/(.*)/\U$1/gi;
+    print "\n";
+    if ($answer =~ /^Y/) {
+	$force=1;
+    }
+}
+
+
+$rmCmd = "virsh vol-delete --pool default $img";
+if ($force) {
+    system $rmCmd;
+} else {
+    print "To remove $img\nUse:\n$rmCmd\n";
+}
+
+
+
+sub usage(){
+    my $msg = shift;
+    my $usg = "Usage: $0 <vmname>
+
+Optional:
+	-f, --force	skip confirmation
+";
+    
+    if (defined $msg) { 
+	my $red = `tput setaf 1`;
+	my $reset = `tput sgr 0`;
+
+	if (chomp($msg) >0 ) {
+	    $reset .= "\n";
+	} else {
+	    $msg .= "\n";
+	}
+
+	$usg .= $red;
+	$usg .= "\n${red}Error: $msg" . $reset;
+	
+
+    }
+
+    return $usg;
+}
