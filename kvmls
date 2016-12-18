@@ -10,11 +10,25 @@ require kvm;
 
 my $kvms = kvm::list();
 
-while ( ($vmname, $kvm) = each %$kvms ){
-    print `tput setaf 2` . "$vmname " . `tput sgr0` . "(" . $kvm->{"state"} . ")\n";
-    while ( ($blkid, $src) = each $kvm->{"blklist"}){
-	print "\t$blkid: $src\n";
+sub printkvm{
+    my $kvm = shift;
+    my $color = `tput setaf 1`; #red
+    my $nocolor = `tput sgr0`; #reset
+    if ( $kvm->{"state"} eq "running" ){
+	$color = `tput setaf 2`; #green
     }
+    print "${color}${vmname} [$kvm->{state}]$nocolor\n";
+    foreach my $ip ($kvm->{"ips"}) {
+	print "\t   ip: $ip\n";
+    }
+    while ( ($blkid, $src) = each $kvm->{"blklist"}){
+	print "\t  $blkid: $src\n";
+    }
+
+}
+
+while ( ($vmname, $kvm) = each %$kvms ){
+    printkvm($kvm);
 }
 
 sub usage(){

@@ -40,7 +40,7 @@ sub arplist() {
 }
 
 
-sub iflist() {
+sub iflist {
     my $vmname = shift;
     @iflist  = split /\n/,`virsh domiflist $vmname`;
     shift @iflist; #remove banner: Interface Type Source Model MAC
@@ -98,21 +98,44 @@ sub shutdown(){
 
 }
 
-sub list(){
+# my $arp = kvm::arplist();
 
+# my $ifs = kvm::iflist($vmname);
+# #print ips
+# while (($interface, $ifobj ) = each %$ifs) {
+#     $mac = $ifobj->{"mac"};
+#     if (exists $arp->{"$mac"}) {
+# 	print  $arp->{"$mac"}->{"ip"} . "\n";
+#     }
+# }
+
+
+sub list(){
     my @kvmlist = split /\n/, `virsh list --all`;
 
     shift @kvmlist; #remove banner: Id Name State
     shift @kvmlist; #remove HR: ------------------------------
+    my $arp = kvm::arplist();
     my %kvms;
+
     foreach my $v (@kvmlist){
 	$v =~  s/^\s+|\s+$//g; #trim 
-
 	($id, $name, $state) = split /\s+/, $v;
+
+	my @ips;
+	my $ifs = iflist($name);
+	while (($interface, $ifobj ) = each %$ifs) {
+	    $mac = $ifobj->{"mac"};
+	    if (exists $arp->{"$mac"}) {
+		push @ips, $arp->{"$mac"}->{"ip"}; 
+	    }
+	}
+	
 	my %kvm = (
 	    "id" => $id,
 	    "name" => $name,
 	    "state" => $state,
+	    "ips" => @ips,
 	    );
 	$kvms{$name} = \%kvm;
     }
