@@ -49,7 +49,14 @@ while( ($id, $img) = each %$blklist){
     $rmCmd = "virsh vol-delete --pool default $img";
 
     if ( $force || confirm("Are you sure you want to delete $img? ")) {
-	system $rmCmd;
+	my $statuscode=system $rmCmd; 
+	if ($statuscode) {
+	    print "manually deleting $img\n";
+	    $statuscode=system "rm $img";
+	    if($statuscode){
+		print "Failed to remove: $img\n";
+	    }
+	}
     } else {
 	print "skipping: $rmCmd\n";
     }
@@ -67,40 +74,41 @@ sub confirm(){
 }
 
 
-exit;
+# exit;
 
-my $domblklist = `virsh domblklist $vmName`;
-@mounts = split /\n/,$domblklist;
+# my $domblklist = `virsh domblklist $vmName`;
+# @mounts = split /\n/,$domblklist;
 
-@img = split /\s+/,$mounts[2];
-$img = $img[1];
+# @img = split /\s+/,$mounts[2];
+# $img = $img[1];
 
-system "virsh destroy $vmName";
-system "virsh undefine $vmName";
+# system "virsh destroy $vmName";
+# system "virsh undefine $vmName";
 
-if (scalar @mounts != 3) {
-    print "I don't know how to handle the removal of the img files\n\n";
-    print $domblklist . "\n";
-    exit;
-}
+# if (scalar @mounts != 3) {
+#     print "I don't know how to handle the removal of the img files\n\n";
+#     print $domblklist . "\n";
+#     exit;
+# }
 
-if (! $force){
-    print "Are you sure you want to delete: $img? ";
-    chomp(my $answer = <STDIN>);
-    $answer =~ s/(.*)/\U$1/gi;
-    print "\n";
-    if ($answer =~ /^Y/) {
-	$force=1;
-    }
-}
+# if (! $force){
+#     print "Are you sure you want to delete: $img? ";
+#     chomp(my $answer = <STDIN>);
+#     $answer =~ s/(.*)/\U$1/gi;
+#     print "\n";
+#     if ($answer =~ /^Y/) {
+# 	$force=1;
+#     }
+# }
 
 
-$rmCmd = "virsh vol-delete --pool default $img";
-if ($force) {
-    system $rmCmd;
-} else {
-    print "To remove $img\nUse:\n$rmCmd\n";
-}
+# $rmCmd = "virsh vol-delete --pool default $img";
+
+# if ($force) {
+#     system $rmCmd;
+# } else {
+#     print "To remove $img\nUse:\n$rmCmd\n";
+# }
 
 
 
