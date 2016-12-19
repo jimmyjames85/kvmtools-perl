@@ -54,7 +54,7 @@ sub hardClone(){
     my $cmd = " --disk path=$clonedest,device=disk,bus=virtio --import ";
 }
 
-sub baseClone(){
+sub baseFrom(){
     my $srcvmname = shift;
     my $destimg = shift;
 
@@ -98,11 +98,11 @@ sub baseClone(){
 	#TODO cleanup
 	die "unable to undefine $tmpname\n";
     }
-    print "new baseclone created: $destimg\n";
+    print "new base image created: $destimg\n";
 
 }
 
-if ( ! defined $arg{"baseclone"} && ! defined $arg{"name"} ) {
+if ( ! defined $arg{"basefrom"} && ! defined $arg{"name"} ) {
     die usage('missing name <vmname>');
 }
 
@@ -159,9 +159,9 @@ if ( defined $arg{"hardclone"} ) {
     $installMethod = &hardClone($arg{'hardclone'}, $arg{'dest'});
 }
 
-if ( defined $arg{"baseclone"} ) {
+if ( defined $arg{"basefrom"} ) {
     $defcount++;
-    &baseClone($arg{'baseclone'}, $arg{'dest'});
+    &baseFrom($arg{'basefrom'}, $arg{'dest'});
     exit; #TODO
 }
 
@@ -200,7 +200,7 @@ Required:
 	  import <imgsrc> name <vmname>
 	  thinclone <imgsrc> dest <imgdest> name <vmname>
 	  hardclone <imgsrc> dest <imgdest> name <vmname>
-	  baseclone <srcvmname> dest <imgdest> 
+	  basefrom <srcvmname> dest <imgdest> 
 
 Optional:
 
