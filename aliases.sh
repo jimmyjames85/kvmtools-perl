@@ -33,6 +33,7 @@ then
 fi
 
 alias kvmconsole='sudo ${KVMTOOLS_DIR}/kvmconsole'
+alias kvmcreate='sudo ${KVMTOOLS_DIR}/kvmcreate'
 alias kvmip='sudo ${KVMTOOLS_DIR}/kvmip'
 alias kvmls='sudo ${KVMTOOLS_DIR}/kvmls'
 alias kvmrm='sudo ${KVMTOOLS_DIR}/kvmrm -f'
