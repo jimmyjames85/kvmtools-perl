@@ -32,7 +32,7 @@ from an
 
 		$ sudo wget $ISO_SRC_URL
 		$ sudo mv CentOS-7-x86_64-Minimal-1611.iso /var/lib/libvirt
-		$ kvmcreate iso /var/lib/libvirt/CentOS-7-x86_64-Minimal-1511.iso name vm-isoinstall
+		$ kvmcreate iso /var/lib/libvirt/CentOS-7-x86_64-Minimal-1611.iso name vm-isoinstall
 		
 This will create a VM with the backing image inside
 `/var/lib/libvirt/images`. You can view details using `kvmls`, but to
