@@ -62,7 +62,7 @@ provision your new VM:**
 		> sudo yum install -y net-tools tree wget 
 		> exit
 
-# Create a base image from an existing VM
+# Creating a base image from an existing VM
 
 A base image is like a template. Once it is created it can be cloned
 to create other VMs. **Create a base image from the `vm-isoinstall`
@@ -74,7 +74,7 @@ VM:**
 		$
 		$ kvmcreate basefrom vm-isoinstall dest /var/lib/libvirt/centos7-base.qcow2
 		
-# Create a thinclone from a base image
+# Creating a thinclone
 
 Creating a VM with the thinclone option will give it two backing
 images. The base image must already exist, and a new *thin* image will
@@ -90,7 +90,7 @@ image:**
 		$ kvmssh thin-clone-one
 		> which tree
 
-# Create a hardclone from a base image
+# Creating a hardclone
 
 Creating a VM with the hardclone option gives it one backing image. It
 essentially copies the base image and uses the copy as the backing
@@ -113,9 +113,9 @@ difference of the backing images. **View the differences in
 
 The thin clone is only 8.2 M whereas the hard clone is 1.3G !!!
 
-# Setup quickcreate after creating a base image
+# Setting up `quickcreate`
 
-Specifying all the arguments for `kvmcreate` can be cumbersome, and
+Specifying all the arguments for `kvmcreate` can be cumbersome.
 `quickcreate` is a shortcut that creates thinclones from a pre-set
 base image. Set this up once in your .bashrc and creating thinclones
 is as easy as `quickcreate vmname`. **Update your .bashrc to include
@@ -136,7 +136,7 @@ the following:**
 		$ qc thin-clone-three
 		$ kvmls
 
-# Delete a Virtual Machine
+# Deleting a Virtual Machine
 
 `kvmrm` will attempt to destroy and undefine virtual machines. If
 using the aliases.sh the --force command is implicit, otherwise, you
