@@ -8,9 +8,6 @@ use lib $basedir;
 
 require kvm;
 
-# my $iso="/var/lib/libvirt/images/CentOS-7-x86_64-Minimal-1511.iso";
-# my $imgsrc="/var/lib/libvirt/centos7-base-install.img";
-
 my %arg=@ARGV;
 
 sub isoInstall(){
@@ -21,7 +18,7 @@ sub isoInstall(){
     if ( defined $destimg) {  # TODO: else it autonames?
 	$cmd .= " $destimg,"
     };
-    $cmd .= "size=10,device=disk,bus=virtio --cdrom $isosrc";
+    $cmd .= "size=10,device=disk,bus=virtio --location $isosrc -x \"console=tty0 console=ttyS0\"";
 }
 
 sub importImg(){
