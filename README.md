@@ -149,3 +149,17 @@ images. **Delete the thin-clone-three VM:**
 		$
 		$ kvmls
 		$ sudo ls /var/lib/libvirt/images
+
+# Setting the default user for kvmssh
+
+`kvmssh` will ssh using the user root unless the `KVMSSH_USER`
+environment variable is set. **Update your .bashrc to include the
+following:**
+
+		KVMTOOLS_DIR='/path/to/cloned/repo/kvmtools-perl'
+		KVMSSH_USER='jimmy'
+		source $KVMTOOLS_DIR/aliases.sh
+
+**Reload your `.bashrc`**
+
+		$ source ~/.bashrc
