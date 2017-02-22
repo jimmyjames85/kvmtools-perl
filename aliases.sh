@@ -24,6 +24,10 @@
 #		The dest folder for where qc (quickcreate) will store
 #		the thinclone
 #
+#       KVMSSH_USER
+#               Determines the user to use when ssh'ing into a VM. If
+#               undefined the root user will be used
+#
 ######################################################################
 
 if [ -z $KVMTOOLS_DIR ] 
@@ -52,7 +56,9 @@ kvmssh() {
     then
 	echo "Please specify a vmname."
     else
-	ssh root@`sudo ${KVMTOOLS_DIR}/kvmip $1`
+        sshuser='root'
+        [ -z $KVMSSH_USER ] || sshuser="$KVMSSH_USER"
+        ssh "$sshuser"@`sudo ${KVMTOOLS_DIR}/kvmip $1`
     fi    
 }
 
